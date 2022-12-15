@@ -55,7 +55,6 @@ const app = createApp({
         .put(url, putData)
         .then(() => {
           this.getProducts();
-          console.log(this.products);
         })
         .catch((err) => {
           alert(err.response.data.message);
