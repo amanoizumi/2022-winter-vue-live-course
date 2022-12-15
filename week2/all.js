@@ -42,18 +42,20 @@ const app = createApp({
         });
     },
     editEnabled(product) {
-      product.is_enabled = !product.is_enabled * 1;
-
       const putData = {
         data: {
           ...product,
         },
       };
+
+      putData.data.is_enabled === 0 ? (putData.data.is_enabled = 1) : (putData.data.is_enabled = 0);
+
       const url = `${this.apiUrl}/api/${this.apiPath}/admin/product/${product.id}`;
       axios
         .put(url, putData)
         .then(() => {
           this.getProducts();
+          console.log(this.products);
         })
         .catch((err) => {
           alert(err.response.data.message);
