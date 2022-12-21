@@ -1,6 +1,9 @@
 import "https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js";
 import { createApp } from "https://unpkg.com/vue@3/dist/vue.esm-browser.js";
 
+let productModal = null;
+let delProductModal = null;
+
 /*
 - lv 2
 - 商品列表：可打開 Modal 進行 新增 / 編輯 / 刪除。
@@ -14,19 +17,6 @@ const app = createApp({
     return {
       apiUrl: "https://vue3-course-api.hexschool.io/v2",
       apiPath: "i-fitness",
-      tempProduct: {
-        category: "",
-        content: "",
-        description: "",
-        imageUrl: "",
-        imagesUrl: [],
-        is_enabled: false,
-        num: 0,
-        origin_price: 0,
-        price: 0,
-        title: "",
-        unit: "",
-      },
 
       isEdit: false,
       uploadedImageUrl: "",
@@ -53,6 +43,7 @@ const app = createApp({
           window.location = "login.html";
         });
     },
+
     getProducts() {
       const url = `${this.apiUrl}/api/${this.apiPath}/admin/products`;
       axios
@@ -64,6 +55,7 @@ const app = createApp({
           alert(err.response.data.message);
         });
     },
+
     editEnabled(product) {
       const productSend = { ...product };
       productSend.is_enabled = !productSend.is_enabled * 1;
@@ -93,18 +85,23 @@ const app = createApp({
           alert(err.response.data.message);
         });
     },
-    editProduct(product) {
-      this.isEdit = true;
 
-      this.tempProduct = { ...product };
+    openModal(doSomething, product = {}) {
+      if (doSomething === "add") {
+        this.isEdit = false;
+        this.resetTempProduct();
 
-      if (!this.tempProduct.hasOwnProperty("imagesUrl")) {
-        this.tempProduct.imagesUrl = [];
+        productModal.show();
+      } else if (doSomething === "edit") {
+        this.isEdit = true;
+        this.tempProduct = { ...product };
+
+        if (!this.tempProduct.hasOwnProperty("imagesUrl")) {
+          this.tempProduct.imagesUrl = [];
+        }
+
+        productModal.show();
       }
-    },
-    addProduct() {
-      this.isEdit = false;
-      this.resetTempProduct();
     },
     confirmAddOrEdit() {
       let url = `${this.apiUrl}/api/${this.apiPath}/admin/product`;
@@ -125,6 +122,7 @@ const app = createApp({
           alert(err.response.data.message);
         });
     },
+
     deleteProductModal(product) {
       this.deleteProduct.title = product.title;
       this.deleteProduct.id = product.id;
@@ -163,7 +161,60 @@ const app = createApp({
         unit: "",
       };
     },
+  },
 
+  mounted() {
+    // 取出 cookies 裡的 token
+    const token = document.cookie.replace(
+      /(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/,
+      "$1"
+    );
+
+    // 設定 Authorization
+    axios.defaults.headers.common.Authorization = token;
+
+    this.checkLogin();
+
+    // throttle 避免連續發送請求
+    // trailing: false
+    // 觸發後，冷卻時間過後也不會再調用
+    this.editEnabled = _.throttle(this.editEnabled, 2000, { trailing: false });
+  },
+});
+
+app.component("productModal", {
+  props: {
+    isEdit: Boolean,
+  },
+  data() {
+    return {
+      uploadedImageUrl: "",
+      tempProduct: {
+        category: "",
+        content: "",
+        description: "",
+        imageUrl: "",
+        imagesUrl: [],
+        is_enabled: false,
+        num: 0,
+        origin_price: 0,
+        price: 0,
+        title: "",
+        unit: "",
+      },
+    };
+  },
+  mounted() {
+    console.log(this.isEdit);
+    productModal = new bootstrap.Modal(
+      document.getElementById("productModal"),
+      {
+        keyboard: false,
+        backdrop: "static",
+      }
+    );
+  },
+  methods: {
     // 上傳圖片
     upload() {
       const file = this.$refs.uploadImage.files[0];
@@ -182,6 +233,13 @@ const app = createApp({
           alert(err.response.data.message);
         });
     },
+    openModal() {
+      productModal.show();
+    },
+    hideModal() {
+      productModal.hide();
+    },
+
     // 新增、替換主要圖片
     addMainImage() {
       this.tempProduct.imageUrl = this.uploadedImageUrl;
@@ -199,25 +257,7 @@ const app = createApp({
       this.tempProduct.imagesUrl.splice(idx, 1);
     },
   },
-
-  mounted() {
-    // 參考範例程式碼
-    // 取出 cookies 裡的 token
-    const token = document.cookie.replace(
-      /(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/,
-      "$1"
-    );
-
-    // 設定 Authorization
-    axios.defaults.headers.common.Authorization = token;
-
-    this.checkLogin();
-
-    // throttle 避免連續發送請求
-    // trailing: false
-    // 觸發後，冷卻時間過後也不會再調用
-    this.editEnabled = _.throttle(this.editEnabled, 2000, { trailing: false });
-  },
+  template: "#productModal",
 });
 
 app.mount("#app");
