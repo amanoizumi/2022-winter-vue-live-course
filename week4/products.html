@@ -56,9 +56,7 @@
                   </button>
                   <button
                     type="button"
-                    @click="deleteProductModal(product)"
-                    data-bs-toggle="modal"
-                    data-bs-target="#delProductModal"
+                    @click="openDeleteProductModal(product)"
                     class="btn btn-outline-danger btn-sm">
                     刪除
                   </button>
@@ -67,11 +65,66 @@
             </tr>
           </tbody>
         </table>
+
+        <pagination :pages="pagination" @emit-pages="getProducts"></pagination>
       </div>
 
-      <product-modal :is-edit="isEdit"></product-modal>
+      <product-modal
+        :is-edit="isEdit"
+        :product="tempProduct"
+        @update-products="getProducts"></product-modal>
+
+      <del-product-modal :product="tempProduct" @update-products="getProducts">
+      </del-product-modal>
     </div>
 
+    <!-- 刪除產品跳窗元件模板 -->
+    <script type="text/x-template" id="delProductModal">
+      <div
+        id="delProductModal"
+        ref="delProductModal"
+        class="modal fade"
+        tabindex="-1"
+        aria-labelledby="delProductModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content border-0">
+            <div class="modal-header bg-danger text-white">
+              <h5 id="delProductModalLabel" class="modal-title">
+                <span>刪除產品</span>
+              </h5>
+              <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              是否刪除
+              <strong class="text-danger"> {{ product.title }} </strong>
+              商品(刪除後將無法恢復)。
+            </div>
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                data-bs-dismiss="modal">
+                取消
+              </button>
+              <button
+                type="button"
+                class="btn btn-danger"
+                data-bs-dismiss="modal"
+                @click="confirmDeleteProduct">
+                確認刪除
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </script>
+
+    <!-- 新增/編輯產品跳窗元件模板 -->
     <script type="text/x-template" id="productModal">
       <div
         ref="productModal" class="modal fade" id="productModal" tabindex="-1"      aria-labelledby="productModalLabel"
@@ -125,6 +178,7 @@
                         </button>
                         <button
                           class="btn btn-outline-primary btn-sm d-block"
+                          :disabled="addImagesBtnIsDisabled"
                           @click="addImages">
                           新增其他圖片
                         </button>
@@ -134,21 +188,21 @@
                       <h5 class="fw-bold">主要圖片</h5>
                       <img
                         class="img-fluid mb-2"
-                        :src="tempProduct.imageUrl"
+                        :src="product.imageUrl"
                         alt="" />
                       <input
                         type="text"
                         class="form-control mb-2"
-                        v-model="tempProduct.imageUrl" />
+                        v-model="product.imageUrl" />
 
                       <h5 class="fw-bold">其他圖片</h5>
 
                       <ul
                         class="list-unstyled"
-                        v-if="tempProduct.imagesUrl.length !== 0">
+                        v-if="product.imagesUrl?.length !== 0">
                         <li
                           class="mb-4"
-                          v-for="(img, idx) in tempProduct.imagesUrl"
+                          v-for="(img, idx) in product.imagesUrl"
                           :key="img">
                           <img class="img-fluid mb-2" :src="img" alt="" />
                           <input
@@ -167,11 +221,167 @@
                       <p v-else>尚無其他圖片</p>
                     </div>
                   </div>
+                  <div class="col-sm-8">
+                    <div class="mb-3">
+                      <label for="title" class="form-label">標題</label>
+                      <input
+                        id="title"
+                        type="text"
+                        v-model="product.title"
+                        class="form-control"
+                        placeholder="請輸入標題" />
+                    </div>
+
+                    <div class="row">
+                      <div class="mb-3 col-md-6">
+                        <label for="category" class="form-label">分類</label>
+                        <input
+                          id="category"
+                          type="text"
+                          v-model="product.category"
+                          class="form-control"
+                          placeholder="請輸入分類" />
+                      </div>
+                      <div class="mb-3 col-md-6">
+                        <label for="price" class="form-label">單位</label>
+                        <input
+                          id="unit"
+                          type="text"
+                          v-model="product.unit"
+                          class="form-control"
+                          placeholder="請輸入單位" />
+                      </div>
+                    </div>
+
+                    <div class="row">
+                      <div class="mb-3 col-md-6">
+                        <label for="origin_price" class="form-label">原價</label>
+                        <input
+                          id="origin_price"
+                          type="number"
+                          min="0"
+                          class="form-control"
+                          v-model.number="product.origin_price"
+                          placeholder="請輸入原價" />
+                      </div>
+                      <div class="mb-3 col-md-6">
+                        <label for="price" class="form-label">售價</label>
+                        <input
+                          id="price"
+                          type="number"
+                          v-model.number="product.price"
+                          min="0"
+                          class="form-control"
+                          placeholder="請輸入售價" />
+                      </div>
+                    </div>
+                    <hr />
+
+                    <div class="mb-3">
+                      <label for="description" class="form-label">產品描述</label>
+                      <textarea
+                        id="description"
+                        type="text"
+                        v-model="product.description"
+                        class="form-control"
+                        placeholder="請輸入產品描述">
+                      </textarea>
+                    </div>
+                    <div class="mb-3">
+                      <label for="content" class="form-label">說明內容</label>
+                      <textarea
+                        id="description"
+                        type="text"
+                        v-model="product.content"
+                        class="form-control"
+                        placeholder="請輸入說明內容">
+                      </textarea>
+                    </div>
+                    <div class="mb-3">
+                      <div class="form-check">
+                        <input
+                          id="is_enabled"
+                          class="form-check-input"
+                          type="checkbox"
+                          v-model="product.is_enabled"
+                          :true-value="1"
+                          :false-value="0" />
+                        <label class="form-check-label" for="is_enabled"
+                          >是否啟用</label
+                        >
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              </div>
+              <div class="modal-footer">
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary"
+                  data-bs-dismiss="modal">
+                  取消
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  @click="confirmAddOrEdit">
+                  確認
+                </button>
               </div>
             </div>
           </div>
         </div>
+    </script>
+
+    <!-- 分頁元件模板 -->
+    <script type="text/x-template" id="pagination">
+      <nav aria-label="Page navigation">
+        <ul class="pagination">
+          <li
+            class="page-item"
+            :class="{'disabled': pages.current_page === 1}"
+          >
+            <a
+              class="page-link"
+              href="#"
+              aria-label="Previous"
+              @click.prevent="emitPages(pages.current_page - 1)"
+            >
+              <span aria-hidden="true">&laquo;</span>
+            </a>
+          </li>
+          <li
+            v-for="(item, index) in pages.total_pages"
+            :key="index"
+            class="page-item"
+            :class="{'active': item === pages.current_page}"
+          >
+            <span
+              class="page-link"
+              v-if="item === pages.current_page"
+            >{{ item }}</span>
+            <a
+              class="page-link"
+              href="#"
+              v-else
+              @click.prevent="emitPages(item)"
+            >{{ item }}</a>
+          </li>
+          <li
+            class="page-item"
+            :class="{'disabled': pages.current_page === pages.total_pages}"
+          >
+            <a
+              class="page-link"
+              href="#"
+              aria-label="Next"
+              @click.prevent="emitPages(pages.current_page + 1)"
+            >
+              <span aria-hidden="true">&raquo;</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
     </script>
 
     <script

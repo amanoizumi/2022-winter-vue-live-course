@@ -17,15 +17,10 @@ const app = createApp({
     return {
       apiUrl: "https://vue3-course-api.hexschool.io/v2",
       apiPath: "i-fitness",
-
       isEdit: false,
-      uploadedImageUrl: "",
       products: [],
-
-      deleteProduct: {
-        id: "",
-        title: "",
-      },
+      tempProduct: {},
+      pagination: {},
     };
   },
   methods: {
@@ -44,12 +39,15 @@ const app = createApp({
         });
     },
 
-    getProducts() {
-      const url = `${this.apiUrl}/api/${this.apiPath}/admin/products`;
+    // 預設取第一頁的產品資料
+    getProducts(page = 1) {
+      const url = `${this.apiUrl}/api/${this.apiPath}/admin/products?page=${page}`;
       axios
         .get(url)
         .then((res) => {
-          this.products = res.data.products;
+          const { products, pagination } = res.data;
+          this.products = products;
+          this.pagination = pagination;
         })
         .catch((err) => {
           alert(err.response.data.message);
@@ -86,47 +84,23 @@ const app = createApp({
         });
     },
 
-    openModal(doSomething, product = {}) {
+    openModal(doSomething, product) {
       if (doSomething === "add") {
         this.isEdit = false;
-        this.resetTempProduct();
-
+        this.tempProduct = {};
         productModal.show();
       } else if (doSomething === "edit") {
         this.isEdit = true;
         this.tempProduct = { ...product };
-
-        if (!this.tempProduct.hasOwnProperty("imagesUrl")) {
-          this.tempProduct.imagesUrl = [];
-        }
-
         productModal.show();
       }
     },
-    confirmAddOrEdit() {
-      let url = `${this.apiUrl}/api/${this.apiPath}/admin/product`;
-      let handlerStr = "post";
 
-      if (this.isEdit) {
-        handlerStr = "put";
-        url = `${url}/${this.tempProduct.id}`;
-      }
-
-      axios[handlerStr](url, { data: this.tempProduct })
-        .then((res) => {
-          this.resetTempProduct();
-          this.getProducts();
-          alert(`已成功${handlerStr === "put" ? "編輯" : "新增"}產品！`);
-        })
-        .catch((err) => {
-          alert(err.response.data.message);
-        });
+    openDeleteProductModal(product) {
+      this.tempProduct = product;
+      delProductModal.show();
     },
 
-    deleteProductModal(product) {
-      this.deleteProduct.title = product.title;
-      this.deleteProduct.id = product.id;
-    },
     confirmDeleteProduct() {
       let url = `${this.apiUrl}/api/${this.apiPath}/admin/product/${this.deleteProduct.id}`;
 
@@ -143,23 +117,6 @@ const app = createApp({
           this.deleteProduct.title = "";
           this.deleteProduct.id = "";
         });
-    },
-    // 清空暫存
-    resetTempProduct() {
-      this.uploadedImageUrl = "";
-      this.tempProduct = {
-        category: "",
-        content: "",
-        description: "",
-        imageUrl: "",
-        imagesUrl: [],
-        is_enabled: false,
-        num: 0,
-        origin_price: 0,
-        price: 0,
-        title: "",
-        unit: "",
-      };
     },
   },
 
@@ -182,30 +139,75 @@ const app = createApp({
   },
 });
 
-app.component("productModal", {
+// 分頁元件
+app.component("pagination", {
+  props: ["pages"],
+  methods: {
+    emitPages(item) {
+      this.$emit("emit-pages", item);
+    },
+  },
+  template: "#pagination",
+});
+// 刪除產品視窗元件
+app.component("delProductModal", {
   props: {
-    isEdit: Boolean,
+    product: Object,
   },
   data() {
     return {
+      apiUrl: "https://vue3-course-api.hexschool.io/v2",
+      apiPath: "i-fitness",
+    };
+  },
+  methods: {
+    confirmDeleteProduct() {
+      const url = `${this.apiUrl}/api/${this.apiPath}/admin/product/${this.product.id}`;
+      axios
+        .delete(url)
+        .then((res) => {
+          this.$emit("update-products");
+          alert("已成功刪除商品！");
+          this.hideModal();
+        })
+        .catch((err) => {
+          alert(err.response.data.message);
+        });
+    },
+    openModal() {
+      delProductModal.show();
+    },
+    hideModal() {
+      delProductModal.hide();
+    },
+  },
+  mounted() {
+    delProductModal = new bootstrap.Modal(
+      document.getElementById("delProductModal"),
+      {
+        keyboard: false,
+        backdrop: "static",
+      }
+    );
+  },
+  template: "#delProductModal",
+});
+
+// 新增/編輯產品視窗元件
+app.component("productModal", {
+  props: {
+    isEdit: Boolean,
+    product: Object,
+  },
+  data() {
+    return {
+      apiUrl: "https://vue3-course-api.hexschool.io/v2",
+      apiPath: "i-fitness",
       uploadedImageUrl: "",
-      tempProduct: {
-        category: "",
-        content: "",
-        description: "",
-        imageUrl: "",
-        imagesUrl: [],
-        is_enabled: false,
-        num: 0,
-        origin_price: 0,
-        price: 0,
-        title: "",
-        unit: "",
-      },
+      addImagesBtnIsDisabled: false,
     };
   },
   mounted() {
-    console.log(this.isEdit);
     productModal = new bootstrap.Modal(
       document.getElementById("productModal"),
       {
@@ -242,19 +244,51 @@ app.component("productModal", {
 
     // 新增、替換主要圖片
     addMainImage() {
-      this.tempProduct.imageUrl = this.uploadedImageUrl;
+      if (this.uploadedImageUrl === "") {
+        alert("請輸入欲加入「主要圖片」的連結！");
+        return;
+      }
+      this.product.imageUrl = this.uploadedImageUrl;
       this.uploadedImageUrl = "";
     },
 
     // 新增到其他圖片
     addImages() {
-      this.tempProduct.imagesUrl.push(this.uploadedImageUrl);
+      if (this.uploadedImageUrl === "") {
+        alert("請輸入欲加入「其他圖片」的連結！");
+        return;
+      }
+
+      if (!this.product.hasOwnProperty("imagesUrl")) {
+        this.product.imagesUrl = [];
+      }
+
+      this.product.imagesUrl.push(this.uploadedImageUrl);
       this.uploadedImageUrl = "";
     },
 
     // 刪除圖片
     deleteImage(idx) {
-      this.tempProduct.imagesUrl.splice(idx, 1);
+      this.product.imagesUrl.splice(idx, 1);
+    },
+    // 確認新增 or 確認編輯
+    confirmAddOrEdit() {
+      let url = `${this.apiUrl}/api/${this.apiPath}/admin/product`;
+      let handlerStr = "post";
+
+      if (this.isEdit) {
+        handlerStr = "put";
+        url = `${url}/${this.product.id}`;
+      }
+      axios[handlerStr](url, { data: this.product })
+        .then((res) => {
+          this.$emit("update-products");
+          alert(`已成功${handlerStr === "put" ? "編輯" : "新增"}產品！`);
+          this.hideModal();
+        })
+        .catch((err) => {
+          alert(err.response.data.message);
+        });
     },
   },
   template: "#productModal",
