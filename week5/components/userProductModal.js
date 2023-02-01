@@ -1,11 +1,11 @@
 export default {
   template: /*html*/ `
   <div class="modal fade" ref="modal" id="productModal" tabindex="-1" role="dialog"
-  aria-labelledby="exampleModalLabel" aria-hidden="true">
+  aria-labelledby="productModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document">
       <div class="modal-content border-0">
         <div class="modal-header bg-dark text-white">
-          <h5 class="modal-title" id="exampleModalLabel">
+          <h5 class="modal-title" id="productModalLabel">
             <span>{{ product.title }}</span>
           </h5>
           <button type="button" class="btn-close"
