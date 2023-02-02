@@ -28,7 +28,7 @@ export default {
                   <input type="number" class="form-control"
                         v-model.number="qty" min="1">
                   <button type="button" class="btn btn-primary"
-                          @click="$emit('add-to-cart', product.id, qty)">加入購物車</button>
+                          @click="addToCart">加入購物車</button>
                 </div>
               </div>
             </div>
@@ -59,6 +59,10 @@ export default {
     });
   },
   methods: {
+    addToCart() {
+      this.$emit("add-to-cart", this.product.id, this.qty);
+      this.qty = 1;
+    },
     openModal() {
       this.modal.show();
     },
