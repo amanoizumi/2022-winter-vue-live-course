@@ -190,6 +190,7 @@ const app = Vue.createApp({
         .then((res) => {
           alert(res.data.message);
           this.$refs.form.resetForm();
+          this.$refs.message.value = "";
           this.getCart();
         })
         .catch((err) => {
