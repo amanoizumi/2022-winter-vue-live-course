@@ -8,12 +8,6 @@ const { defineRule, Form, Field, ErrorMessage, configure } = VeeValidate;
 const { required, email, min, max } = VeeValidateRules;
 const { localize, loadLocaleFromURL } = VeeValidateI18n;
 
-/*
-送出訂單時，留言的欄位也要記得清除。
-
-更改產品數量後，在點開「查看更多」的加入購物車就會多出一項新品項。
-*/
-
 // 定義規則
 // 必填
 defineRule("required", required);
