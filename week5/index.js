@@ -8,6 +8,12 @@ const { defineRule, Form, Field, ErrorMessage, configure } = VeeValidate;
 const { required, email, min, max } = VeeValidateRules;
 const { localize, loadLocaleFromURL } = VeeValidateI18n;
 
+/*
+送出訂單時，留言的欄位也要記得清除。
+
+更改產品數量後，在點開「查看更多」的加入購物車就會多出一項新品項。
+*/
+
 // 定義規則
 // 必填
 defineRule("required", required);
@@ -115,26 +121,23 @@ const app = Vue.createApp({
           this.isLoading = false;
         });
     },
-    updateCartItemNum(cartItem) {
-      this.isLoading = true;
-
-      const { id, qty } = cartItem;
-      if (qty < 1) {
-        alert("商品數量至少要有一個");
-        this.getCart();
-        return;
-      }
+    putCartItem(cartItem) {
+      const { id, product_id, qty } = cartItem;
 
       const url = `${apiUrl}/api/${apiPath}/cart/${id}`;
+
+      const putData = {
+        product_id,
+        qty,
+      };
+
       axios
-        .put(url, {
-          data: {
-            product_id: id,
-            qty,
-          },
-        })
-        .then(() => {
+        .put(url, { data: putData })
+        .then((res) => {
+          alert(res.data.message);
           this.getCart();
+
+          this.$refs.userProductModal.hideModal();
         })
         .catch((err) => {
           alert(err.response.data.message);

@@ -115,7 +115,7 @@
                         type="number"
                         v-model.number="cartItem.qty"
                         class="form-control"
-                        @change="updateCartItemNum(cartItem)" />
+                        @change="putCartItem(cartItem)" />
                       <span class="input-group-text" id="basic-addon2"
                         >{{ cartItem.product.unit }}</span
                       >
